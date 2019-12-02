@@ -49,27 +49,38 @@ BEGIN
    DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
     select from_account_no,amount_transferred;
-      ROLLBACK;
-    insert into log(account_no,amount,date)values(from_account_no,amount_transferred,current_timestamp());
+     
+    
+     ROLLBACK TO account_transactions ;
+     insert into log(account_no,amount,date)values(from_account_no,amount_transferred,current_timestamp());
+    
     SET message="Transaction failed";
   
     END;
 START TRANSACTION;
  
+        savepoint account_transactions;
 
-INSERT INTO account_transactions(from_account_no,to_account_no,transaction_type,amount,transaction_date) 
-VALUES(from_account_no,to_account_no,actions,amount_transferred,now());
-
- insert into log(account_no,amount,date,status)values(from_account_no,amount_transferred,current_timestamp(),'success');
-
+      INSERT INTO account_transactions(
+      from_account_no,to_account_no,transaction_type,amount,transaction_date) 
+         VALUES(
+         from_account_no,to_account_no,actions,amount_transferred,now());
+ 
+ insert into log 
+ (account_no,amount,date,status)
+ values
+ (from_account_no,amount_transferred,current_timestamp(),'success');
+ 
  UPDATE accounts
    SET balance = balance - amount_transferred
  WHERE account_no = from_account_no;
  
+ 
  COMMIT;
           SET message="Transaction Success";
+          savepoint end;
 END$$
-CALL fund_transfer(100000,200,100,'debit',@message)$$
+CALL fund_transfer(100088,200,100,'debit',@message)$$
 SELECT @message$$
 select * from accounts$$
 select * from account_transactions$$
