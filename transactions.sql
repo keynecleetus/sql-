@@ -6,55 +6,71 @@ CREATE TABLE accounts (
     email VARCHAR(50)NOT NULL,
     account_no INT NOT NULL, 
     balance DECIMAL NOT NULL DEFAULT 0,
-    UNIQUE (account_no),
-    UNIQUE(email),
+    CONSTRAINT UNIQUE uk_account_no (account_no),
+    CONSTRAINT UNIQUE uk_email (email),
         CHECK(balance >= 0)
 );
+
 INSERT INTO accounts (email,account_no,balance)
 VALUES ('keyne.loui@gmail.com',100,10000),('sheyne@gmail.com',200,10000);
  
 SELECT * FROM  accounts;
 INSERT INTO account_transactions(account_no,flag,amount,transaction_date) 
-VALUES(100,'-',1000,now());
+VALUES(100,'credit',1000,now());
 
 CREATE TABLE account_transactions (
     transaction_id INT AUTO_INCREMENT PRIMARY KEY,
-    account_no INT NOT NULL, 
-    flag VARCHAR(10) NOT NULL, 
-    amount DECIMAL NOT NULL, 
+    from_account_no INT NOT NULL, 
+    to_account_no INT NOT NULL,
+    transaction_type VARCHAR(10) NOT NULL, 
+    amount DECIMAL(10,2) NOT NULL, 
     transaction_date DATE NOT NULL 
 );
 
+create table log(
+     id int auto_increment primary key,
+     account_no int not null,
+     amount decimal(10,4)not null,
+     date timestamp not null,
+     status varchar(40) not null default 'failed'
+     );
+         
+drop procedure fund_transfer;
 DELIMITER $$
 SET autocommit=0$$
-CREATE PROCEDURE fund_transfer1(
+CREATE PROCEDURE fund_transfer(
 IN amount_transferred int,
-IN account_info int,
+IN from_account_no int,
+IN to_account_no int,
 IN actions VARCHAR(10),
 OUT message VARCHAR(50))
 BEGIN
  DECLARE `_rollback` BOOL DEFAULT 0;
-    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET `_rollback` = 1;
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    select from_account_no,amount_transferred;
+      ROLLBACK;
+    insert into log(account_no,amount,date)values(from_account_no,amount_transferred,current_timestamp());
+    SET message="Transaction failed";
+  
+    END;
 START TRANSACTION;
  
 
-INSERT INTO account_transactions(account_no,flag,amount,transaction_date) 
-VALUES(account_info,actions,amount_transferred,now());
+INSERT INTO account_transactions(from_account_no,to_account_no,transaction_type,amount,transaction_date) 
+VALUES(from_account_no,to_account_no,actions,amount_transferred,now());
+
+ insert into log(account_no,amount,date,status)values(from_account_no,amount_transferred,current_timestamp(),'success');
 
  UPDATE accounts
    SET balance = balance - amount_transferred
- WHERE account_no = account_info;
+ WHERE account_no = from_account_no;
  
- 
-IF `_rollback` THEN
-        ROLLBACK;
-        SET message="Transaction failed";
-    ELSE
-        COMMIT;
+ COMMIT;
           SET message="Transaction Success";
-    END IF; 
 END$$
-CALL fund_transfer1(100,200,'+',@message)$$
+CALL fund_transfer(100000,200,100,'debit',@message)$$
 SELECT @message$$
-SELECT * FROM accounts$$
-SELECT * FROM account_transactions$$
+select * from accounts$$
+select * from account_transactions$$
+select * from log;
