@@ -1,5 +1,5 @@
-create database transactions;
-use transactions;
+CREATE DATABASE transactions;
+USE transactions;
 
 CREATE TABLE accounts ( 
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -13,7 +13,7 @@ CREATE TABLE accounts (
 INSERT INTO accounts (email,account_no,balance)
 VALUES ('keyne.loui@gmail.com',100,10000),('sheyne@gmail.com',200,10000);
  
-select * from  accounts;
+SELECT * FROM  accounts;
 INSERT INTO account_transactions(account_no,flag,amount,transaction_date) 
 VALUES(100,'-',1000,now());
 
@@ -26,11 +26,12 @@ CREATE TABLE account_transactions (
 );
 
 DELIMITER $$
-set autocommit=0$$
-CREATE PROCEDURE fund_transfer(
+SET autocommit=0$$
+CREATE PROCEDURE fund_transfer1(
 IN amount_transferred int,
 IN account_info int,
-IN actions VARCHAR(10))
+IN actions VARCHAR(10),
+OUT message VARCHAR(50))
 BEGIN
  DECLARE `_rollback` BOOL DEFAULT 0;
     DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET `_rollback` = 1;
@@ -47,10 +48,13 @@ VALUES(account_info,actions,amount_transferred,now());
  
 IF `_rollback` THEN
         ROLLBACK;
+        SET message="Transaction failed";
     ELSE
         COMMIT;
+          SET message="Transaction Success";
     END IF; 
 END$$
-call fund_transfer(100,100,'+')$$
-select * from accounts$$
-select * from account_transactions$$
+CALL fund_transfer1(100,200,'+',@message)$$
+select @message$$
+SELECT * FROM accounts$$
+SELECT * FROM account_transactions$$
