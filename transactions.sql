@@ -6,16 +6,16 @@ CREATE TABLE accounts (
     email VARCHAR(50)NOT NULL,
     account_no INT NOT NULL, 
     balance DECIMAL NOT NULL DEFAULT 0,
-    CONSTRAINT UNIQUE uk_account_no (account_no),
-    CONSTRAINT UNIQUE uk_email (email),
-        CHECK(balance >= 0)
+    CONSTRAINT  uk_account_no UNIQUE (account_no),
+    CONSTRAINT uk_email UNIQUE  (email),
+    CONSTRAINT ck_balance  CHECK(balance >= 0)
 );
 
 INSERT INTO accounts (email,account_no,balance)
 VALUES ('keyne.loui@gmail.com',100,10000),('sheyne@gmail.com',200,10000);
  
 SELECT * FROM  accounts;
-INSERT INTO account_transactions(account_no,flag,amount,transaction_date) 
+INSERT INTO account_transactions(account_no,transaction_type,amount,transaction_date) 
 VALUES(100,'credit',1000,now());
 
 CREATE TABLE account_transactions (
